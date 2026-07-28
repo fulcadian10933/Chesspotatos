@@ -1075,10 +1075,12 @@ function randomRoomCode(){
 }
 
 function serializeGameForRoom(){
-  return {
+  const raw = {
     board: game.board, turn: game.turn, castling: game.castling, enPassant: game.enPassant,
     halfmove: game.halfmove, fullmove: game.fullmove, moveHistory: game.moveHistory, status: game.status,
   };
+  // Firebase refuse les valeurs "undefined" (ex: promoteTo/captured absents) : on les retire.
+  return JSON.parse(JSON.stringify(raw));
 }
 function deserializeGameFromRoom(s){
   return {
@@ -1165,7 +1167,11 @@ function pushRoomState(){
   };
   updates['players/' + online.myColor] = { name: online.myName };
   lastKnownMoveCount = game.moveHistory.length; // évite de se ré-appliquer son propre coup via le listener
-  roomRef(online.roomCode).update(updates).catch(()=>{ /* nouvelle tentative silencieuse si la connexion revient */ });
+  roomRef(online.roomCode).update(updates).catch((e)=>{
+    console.error('Erreur envoi du coup vers Firebase :', e);
+    const dot = document.getElementById('statusDot');
+    if (dot) dot.textContent = "⚠️ Coup non synchronisé — vérifie ta connexion";
+  });
 }
 
 let lastKnownMoveCount = 0;
